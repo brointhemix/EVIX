@@ -220,9 +220,33 @@ protocol bgp evix_02_v6 {
 
 ### Mikrotik
 
-> **Help wanted!** 
->
-> Do you run Mikrotik RouterOS on EVIX? We'd appreciate if you would provide us with your (example) config so we can add it to this document: helpdesk@evix.org
+Of course you need to fill in you AS and prefix details.
+
+The export policy is constructed in such a way that you can add attributes (prepend, communities, etc.) to the EVIX-export chain entry matching the <Your AS> chain. The <Your ASN> chain holds only the prefixes you advertise under your ASN.
+        
+To advertise more prefixes, you can either add prefixes to the <Your ASN> chain, or create a new chain named <Some different ASN>, place the other ASN's prefixes there, and add an entry into the EVIX-export policy after <Your ASN> entry but before the last entry, which is an explicit deny.
+
+```
+/routing filter
+add action=accept chain=accept-all
+add action=accept chain=<Your ASN> prefix=<Your prefix>
+add action=accept chain=EVIX-export match-chain=<Your ASN>
+add action=discard chain=EVIX-export
+
+/routing bgp instance
+add as=<Your ASN> client-to-client-reflection=no name=<Your instance name> router-id=<Your router id>
+
+/routing bgp network
+add network=<Your prefix> synchronize=no
+
+/routing bgp peer
+add address-families=ipv6 in-filter=accept-all instance=<Your instance name> name="EVIX RS US IPv6" \
+    out-filter=EVIX-export remote-address=2602:fed2:fff:ffff::1 remote-as=137933 \
+    remove-private-as=yes
+add address-families=ipv6 in-filter=accept-all instance=<Your instance name> name="EVIX RS EU IPv6" \
+    out-filter=EVIX-export remote-address=2602:fed2:fff:ffff::253 remote-as=209762 \
+    remove-private-as=yes
+```
 
 ## Some helpful troubleshooting steps:
 
